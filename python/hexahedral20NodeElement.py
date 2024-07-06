@@ -202,7 +202,7 @@ class Hexahedral20NodeElement:
         middle_num_nodes = (num_elements_x + 1) * (num_elements_y + 1)
         num_nodes = (bottom_num_nodes + top_num_nodes + middle_num_nodes)*num_elements_z - (num_elements_z - 1)*top_num_nodes
         size = num_nodes * dof_per_node
-        K_global = lil_matrix((size, size))
+        K_subchain = lil_matrix((size, size))
 
         connectivity = self.define_connectivity(num_elements_x, num_elements_y, num_elements_z)
 
@@ -224,9 +224,9 @@ class Hexahedral20NodeElement:
                         for l in range(3):
                             GI = 3 * global_i + k
                             GJ = 3 * global_j + l
-                            K_global[GI, GJ] += K_FE[3 * local_i + k, 3 * local_j + l]
+                            K_subchain[GI, GJ] += K_FE[3 * local_i + k, 3 * local_j + l]
 
-        self.K_global = csr_matrix(K_global).toarray()
+        self.K_subchain = csr_matrix(K_subchain).toarray()
 
     def get_global_stiffness_matrix(self):
-        return self.K_global
+        return self.K_subchain

@@ -1,5 +1,7 @@
 import numpy as np
 import sympy as sp
+import pandas as pd
+
 from scipy.sparse import lil_matrix, csr_matrix
 from tqdm import tqdm
 
@@ -115,6 +117,7 @@ class Hexahedral8NodeElement:
                     B = self.construct_B_matrix(xi, eta, zeta, J_inv_T)
                     w = gauss_weights[i] * gauss_weights[j] * gauss_weights[k]
                     K_FE += w * B.T @ self.D @ B * J_det
+        K_FE = Hexahedral8NodeElement.enforce_symmetry(K_FE)
         return K_FE
     
     def define_connectivity(self, num_elements_x, num_elements_y, num_elements_z):
@@ -133,18 +136,18 @@ class Hexahedral8NodeElement:
                     connectivity.append([n0, n1, n3, n2, n4, n5, n7, n6])
         return connectivity
 
-    def assemble_global_stiffness_matrix(self, num_elements_x, num_elements_y, num_elements_z, element_size_x, element_size_y, element_size_z):
+    def assemble_subchain_stiffness_matrix(self, num_elements_x, num_elements_y, num_elements_z, element_size_x, element_size_y, element_size_z):
         dof_per_node = 3
         num_nodes_x = num_elements_x + 1
         num_nodes_y = num_elements_y + 1
         num_nodes_z = num_elements_z + 1
         num_nodes = num_nodes_x * num_nodes_y * num_nodes_z
         size = num_nodes * dof_per_node
-        K_global = lil_matrix((size, size))
+        K_subchain = lil_matrix((size, size))
 
         connectivity = self.define_connectivity(num_elements_x, num_elements_y, num_elements_z)
 
-        for element in tqdm(connectivity):
+        for element_idx, element in enumerate(tqdm(connectivity)):
             nodes_physical = np.array([
                 [element[0] % num_nodes_x * element_size_x, element[0] // num_nodes_x % num_nodes_y * element_size_y, element[0] // (num_nodes_x * num_nodes_y) * element_size_z],
                 [element[1] % num_nodes_x * element_size_x, element[1] // num_nodes_x % num_nodes_y * element_size_y, element[1] // (num_nodes_x * num_nodes_y) * element_size_z],
@@ -157,7 +160,11 @@ class Hexahedral8NodeElement:
             ], dtype=float)
             
             K_FE = self.compute_element_stiffness_matrix(nodes_physical)
-            
+            p = 1E-6
+            solid_elements = list(range(0,2450,50))+list(range(2450,2500))+list(range(49,2499,50))
+            #Hexahedral8NodeElement.visualize_design_domain(solid_elements,(num_elements_y,num_elements_x))
+            if element_idx not in solid_elements:
+                K_FE = p * K_FE
             for local_i in range(8):  # Loop over local nodes
                 for local_j in range(8):
                     global_i = element[local_i]
@@ -166,9 +173,29 @@ class Hexahedral8NodeElement:
                         for l in range(3):
                             GI = 3 * global_i + k
                             GJ = 3 * global_j + l
-                            K_global[GI, GJ] += K_FE[3 * local_i + k, 3 * local_j + l]
+                            K_subchain[GI, GJ] += K_FE[3 * local_i + k, 3 * local_j + l]
 
-        self.K_global = csr_matrix(K_global).toarray()
+        self.K_subchain = csr_matrix(K_subchain).toarray()
 
-    def get_global_stiffness_matrix(self):
-        return self.K_global
+    def get_subchain_stiffness_matrix(self):
+        return self.K_subchain
+    
+    @staticmethod
+    def enforce_symmetry(matrix):
+        rows, cols = matrix.shape
+        for i in range(rows):
+            for j in range(i + 1, cols):
+                avg_value = (matrix[i, j] + matrix[j, i]) / 2
+                matrix[i, j] = avg_value
+                matrix[j, i] = avg_value
+        return matrix
+    
+    @staticmethod
+    def visualize_design_domain(solid_elements,domain_size):
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        design_domain = np.zeros(domain_size)
+        for element in solid_elements:
+            design_domain[element//domain_size[0],element%domain_size[1]] = 1
+        df = pd.DataFrame(design_domain)
+        print(df)
