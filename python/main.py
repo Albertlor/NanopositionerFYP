@@ -13,9 +13,9 @@ num_elements_x = 50
 num_elements_y = 50
 num_elements_z = 1
 
-element_size_x = 2
-element_size_y = 2
-element_size_z = 20
+element_size_x = 0.002
+element_size_y = 0.002
+element_size_z = 0.02
 
 """
 8-Node Linear Hexahedral Finite Element
