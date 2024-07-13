@@ -11,9 +11,11 @@ class Hexahedral8NodeElement:
     def __init__(self, E, nu):
         self.E = E
         self.nu = nu
+        self.loading_point = 2475
         self.D = self.construct_D_matrix()
         self.xi, self.eta, self.zeta = sp.symbols('xi eta zeta')
         self.N = self.define_shape_functions()
+        self.N_func = [sp.lambdify((self.xi, self.eta, self.zeta), N) for N in self.N]
         self.dN_dxi, self.dN_deta, self.dN_dzeta = self.compute_shape_function_derivatives()
         self.dN_dxi_func = [sp.lambdify((self.xi, self.eta, self.zeta), dN) for dN in self.dN_dxi]
         self.dN_deta_func = [sp.lambdify((self.xi, self.eta, self.zeta), dN) for dN in self.dN_deta]
@@ -117,7 +119,6 @@ class Hexahedral8NodeElement:
                     B = self.construct_B_matrix(xi, eta, zeta, J_inv_T)
                     w = gauss_weights[i] * gauss_weights[j] * gauss_weights[k]
                     K_FE += w * B.T @ self.D @ B * J_det
-        K_FE = Hexahedral8NodeElement.enforce_symmetry(K_FE)
         return K_FE
     
     def define_connectivity(self, num_elements_x, num_elements_y, num_elements_z):
@@ -146,22 +147,36 @@ class Hexahedral8NodeElement:
         K_subchain = lil_matrix((size, size))
 
         connectivity = self.define_connectivity(num_elements_x, num_elements_y, num_elements_z)
+        self.loading_nodes = connectivity[self.loading_point]
 
         for element_idx, element in enumerate(tqdm(connectivity)):
+            # nodes_physical = np.array([
+            #     [element[0] % num_nodes_x * element_size_x, element[0] // num_nodes_x % num_nodes_y * element_size_y, element[0] // (num_nodes_x * num_nodes_y) * element_size_z],
+            #     [element[1] % num_nodes_x * element_size_x, element[1] // num_nodes_x % num_nodes_y * element_size_y, element[1] // (num_nodes_x * num_nodes_y) * element_size_z],
+            #     [element[2] % num_nodes_x * element_size_x, element[2] // num_nodes_x % num_nodes_y * element_size_y, element[2] // (num_nodes_x * num_nodes_y) * element_size_z],
+            #     [element[3] % num_nodes_x * element_size_x, element[3] // num_nodes_x % num_nodes_y * element_size_y, element[3] // (num_nodes_x * num_nodes_y) * element_size_z],
+            #     [element[4] % num_nodes_x * element_size_x, element[4] // num_nodes_x % num_nodes_y * element_size_y, element[4] // (num_nodes_x * num_nodes_y) * element_size_z],
+            #     [element[5] % num_nodes_x * element_size_x, element[5] // num_nodes_x % num_nodes_y * element_size_y, element[5] // (num_nodes_x * num_nodes_y) * element_size_z],
+            #     [element[6] % num_nodes_x * element_size_x, element[6] // num_nodes_x % num_nodes_y * element_size_y, element[6] // (num_nodes_x * num_nodes_y) * element_size_z],
+            #     [element[7] % num_nodes_x * element_size_x, element[7] // num_nodes_x % num_nodes_y * element_size_y, element[7] // (num_nodes_x * num_nodes_y) * element_size_z]
+            # ], dtype=float)
             nodes_physical = np.array([
-                [element[0] % num_nodes_x * element_size_x, element[0] // num_nodes_x % num_nodes_y * element_size_y, element[0] // (num_nodes_x * num_nodes_y) * element_size_z],
-                [element[1] % num_nodes_x * element_size_x, element[1] // num_nodes_x % num_nodes_y * element_size_y, element[1] // (num_nodes_x * num_nodes_y) * element_size_z],
-                [element[2] % num_nodes_x * element_size_x, element[2] // num_nodes_x % num_nodes_y * element_size_y, element[2] // (num_nodes_x * num_nodes_y) * element_size_z],
-                [element[3] % num_nodes_x * element_size_x, element[3] // num_nodes_x % num_nodes_y * element_size_y, element[3] // (num_nodes_x * num_nodes_y) * element_size_z],
-                [element[4] % num_nodes_x * element_size_x, element[4] // num_nodes_x % num_nodes_y * element_size_y, element[4] // (num_nodes_x * num_nodes_y) * element_size_z],
-                [element[5] % num_nodes_x * element_size_x, element[5] // num_nodes_x % num_nodes_y * element_size_y, element[5] // (num_nodes_x * num_nodes_y) * element_size_z],
-                [element[6] % num_nodes_x * element_size_x, element[6] // num_nodes_x % num_nodes_y * element_size_y, element[6] // (num_nodes_x * num_nodes_y) * element_size_z],
-                [element[7] % num_nodes_x * element_size_x, element[7] // num_nodes_x % num_nodes_y * element_size_y, element[7] // (num_nodes_x * num_nodes_y) * element_size_z]
-            ], dtype=float)
+                [ 0, 0, 0],
+                [ 0.002, 0, 0],
+                [ 0.002, 0.002, 0],
+                [ 0, 0.002, 0],
+                [ 0, 0, 0.02],
+                [ 0.002, 0, 0.02],
+                [ 0.002, 0.002, 0.02],
+                [ 0, 0.002, 0.02]
+            ])
             
+            if element_idx==self.loading_point:
+                self.loading_nodes_coordinates = nodes_physical
             K_FE = self.compute_element_stiffness_matrix(nodes_physical)
+            
             p = 1E-6
-            solid_elements = list(range(0,2450,50))+list(range(2450,2500))+list(range(49,2499,50))
+            solid_elements = list(range(0,2350,50))+list(range(2350,2400))+list(range(49,2399,50))+[2400+25,2450+25]
             #Hexahedral8NodeElement.visualize_design_domain(solid_elements,(num_elements_y,num_elements_x))
             if element_idx not in solid_elements:
                 K_FE = p * K_FE
@@ -178,7 +193,17 @@ class Hexahedral8NodeElement:
         self.K_subchain = csr_matrix(K_subchain).toarray()
 
     def get_subchain_stiffness_matrix(self):
+        print("Getting Subchain's Stiffness Matrix...", flush=True)
+        # self.K_subchain = Hexahedral8NodeElement.enforce_symmetry(self.K_subchain)
+        # self.K_subchain = self.K_subchain.round(6)
+        print(self.K_subchain[1:1+9,1:1+9])
         return self.K_subchain
+    
+    def get_loading_point_info(self):
+        loading_J = self.construct_Jacobian_matrix(0, 0, 0, self.loading_nodes_coordinates)
+        loading_J_inv = np.linalg.inv(loading_J)
+        loading_J_inv_T = loading_J_inv.T
+        return self.loading_nodes, self.N_func, self.dN_dxi_func, self.dN_deta_func, self.dN_dzeta_func, loading_J_inv_T
     
     @staticmethod
     def enforce_symmetry(matrix):

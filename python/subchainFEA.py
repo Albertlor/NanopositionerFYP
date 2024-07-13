@@ -1,48 +1,103 @@
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix, lil_matrix
 from scipy.sparse.linalg import spsolve
+from tqdm import tqdm
 
 class SubchainFEA:
-    def __init__(self, K_subchain, force_vector):
-        self.K_sc = csc_matrix(K_subchain)  # Use CSC format for efficiency in solving
-        self.F = lil_matrix(force_vector)   # Use LIL format for constructing the force vector
+    def __init__(self, K_subchain, force_vector, loading_nodes, N_func, dN_dxi_func, dN_deta_func, dN_dzeta_func, loading_J_inv_T, dof_per_node):
+        self.K_sc = K_subchain  # Use CSC format for efficiency in solving
+        self.F = force_vector   # Use LIL format for constructing the force vector
+        self.loading_nodes = loading_nodes  
+        self.N_func = N_func
+        self.dN_dxi_func = dN_dxi_func
+        self.dN_deta_func = dN_deta_func
+        self.dN_dzeta_func = dN_dzeta_func
+        self.loading_J_inv_T = loading_J_inv_T
+        self.dof_per_node = dof_per_node
 
-    def define_extraction_matrix(self, loading_point):
-        self.A = lil_matrix((self.F.shape[1], self.K_sc.shape[0]))  # Use LIL format for construction
-        dof_per_node = 3
-        start_col = loading_point * dof_per_node
+    def define_force_vector(self, element_size_x):
+        load = 1/len(self.loading_nodes)
+        mx_y = ['-','-','-','-', '+','+','+','+']
+        mx_z = ['-','-','+','+', '-','-','+','+']
+        my_x = ['+','+','+','+', '-','-','-','-']
+        my_z = ['+','-','-','+', '+','-','-','+']
+        mz_x = ['+','+','-','-', '+','+','-','-']
+        mz_y = ['-','+','+','-', '-','+','+','-']
+        for i, node in enumerate(self.loading_nodes):
+            start_row = node * self.dof_per_node
 
-        for i in range(dof_per_node):
-            self.A[i, start_col + i] = 1
-            self.A[i + dof_per_node, start_col + i] = 1
+            self.F[start_row, 0] = load  # Load in x 
+            self.F[start_row+1, 1] = load  # Load in y 
+            self.F[start_row+2, 2] = load  # Load in z 
 
-        self.A = self.A.tocsc()  # Convert to CSC format for operations
+            if mx_y[i]=='+':
+                self.F[start_row+1, 3] = load/(element_size_x/2)  # Moment about x 
+            elif mx_y[i]=='-':
+                self.F[start_row+1, 3] = -load/(element_size_x/2)  # Moment about x 
+            if mx_z[i]=='+':
+                self.F[start_row+2, 3] = load/(element_size_x/2)  # Moment about x 
+            elif mx_z[i]=='-':
+                self.F[start_row+2, 3] = -load/(element_size_x/2)  # Moment about x 
 
-    def define_force_vector(self, loading_point):
-        dof_per_node = 3
-        start_row = loading_point * dof_per_node
+            if my_x[i]=='+':
+                self.F[start_row, 4] = load/(element_size_x/2)  # Moment about y 
+            elif my_x[i]=='-':
+                self.F[start_row, 4] = -load/(element_size_x/2)  # Moment about y
+            if my_z[i]=='+':
+                self.F[start_row+2, 4] = load/(element_size_x/2)  # Moment about y
+            elif my_z[i]=='-':
+                self.F[start_row+2, 4] = -load/(element_size_x/2)  # Moment about y 
 
-        self.F[start_row, 0] = 1.0  # Load in x at node 1
-        self.F[start_row + 1, 1] = 1.0  # Load in y at node 1
-        self.F[start_row + 2, 2] = 1.0  # Load in z at node 1
-        self.F[start_row, 3] = 1.0  # Moment about x at node 1
-        self.F[start_row + 1, 4] = 1.0  # Moment about y at node 1
-        self.F[start_row + 2, 5] = 1.0  # Moment about z at node 1
+            if mz_x[i]=='+':
+                self.F[start_row, 5] = load/(element_size_x/2)  # Moment about z 
+            elif mz_x[i]=='-':
+                self.F[start_row, 5] = -load/(element_size_x/2)  # Moment about z 
+            if mz_y[i]=='+':
+                self.F[start_row+1, 5] = load/(element_size_x/2)  # Moment about z
+            elif mz_y[i]=='-':
+                self.F[start_row+1, 5] = -load/(element_size_x/2)  # Moment about z
 
-        self.F = self.F.tocsc()  # Convert to CSC format for operations
+            print(f"Force at node {node}:")
+            print(self.F[node*3:node*3+3,:])
+
+    def apply_boundary_conditions(self, fix_nodes):
+        print("Applying boundary conditions...", flush=True)
+        for node in tqdm(fix_nodes):
+            start_row = node * self.dof_per_node
+            start_col = start_row
+            for i in range(self.dof_per_node):
+                self.K_sc[start_row+i, :] = 0
+                self.K_sc[:, start_col+i] = 0
+                self.K_sc[start_row+i, start_col+i] = 1.0
+                self.F[start_row+i, :] = 0
 
     def compute_deformation_matrix(self):
         # Using spsolve for efficient solution
-        self.U = spsolve(self.K_sc, self.F.toarray())
-        self.U = SubchainFEA.enforce_symmetry(self.U)
+        print("Solving for global nodal deformations vector...", flush=True)
+        self.U = np.linalg.solve(self.K_sc,self.F)
+        for node in self.loading_nodes:
+            print(f"Global nodal deformations at node {node}:")
+            print(self.U[node*3:node*3+3,:])
 
-    def apply_boundary_conditions(self, fix_nodes):
-        for node in fix_nodes:
-            dof_per_node = 3
-            start_row = node * dof_per_node
-            self.U[start_row:start_row+dof_per_node, 0:6] = 0
+    def define_extraction_matrix(self):
+        print("Preparing extraction matrix...", flush=True)
+        self.A = np.zeros((self.F.shape[1], self.K_sc.shape[0]))  # Use LIL format for construction
+        for i, node in enumerate(self.loading_nodes):
+            start_col = node * self.dof_per_node
+
+            self.A[0, start_col] = self.N_func[i](0,0,0)
+            self.A[1, start_col + 1] = self.N_func[i](0,0,0)
+            self.A[2, start_col + 2] = self.N_func[i](0,0,0)
+
+            self.A[3, start_col + 1] = -self.dN_dzeta_func[i](0,0,0)*self.loading_J_inv_T[2,2]
+            self.A[3, start_col + 2] = self.dN_deta_func[i](0,0,0)*self.loading_J_inv_T[1,1]
+            self.A[4, start_col] = self.dN_dzeta_func[i](0,0,0)*self.loading_J_inv_T[2,2]
+            self.A[4, start_col + 2] = -self.dN_dxi_func[i](0,0,0)*self.loading_J_inv_T[0,0]
+            self.A[5, start_col] = -self.dN_deta_func[i](0,0,0)*self.loading_J_inv_T[2,2]
+            self.A[5, start_col + 1] = self.dN_dxi_func[i](0,0,0)*self.loading_J_inv_T[0,0]
 
     def extract_compliance_matrix(self):
+        print("Extracting compliance matrix...", flush=True)
         self.C_extracted = self.A @ self.U
         return self.C_extracted
     
@@ -97,7 +152,7 @@ class SubchainFEA:
             self.K_global += J_inv.T @ K_extracted @ J_inv
 
     def get_global_stiffness_matrix(self):
-        self.K_global = SubchainFEA.format_matrix_scientific(self.K_global)
+        self.K_global = self.K_global
         return self.K_global
     
     @staticmethod
