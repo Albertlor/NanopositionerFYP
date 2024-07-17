@@ -15,8 +15,8 @@ num_elements_x = 50
 num_elements_y = 50
 num_elements_z = 1
 
-element_size_x = 0.002
-element_size_y = 0.002
+element_size_x = 0.001
+element_size_y = 0.001
 element_size_z = 0.02
 
 dof_per_node = 3
@@ -75,8 +75,10 @@ K_subchain = hexahedral8Node.get_subchain_stiffness_matrix()
 loading_nodes, N_func, dN_dxi_func, dN_deta_func, dN_dzeta_func, loading_J_inv_T = hexahedral8Node.get_loading_point_info()
 print(f"Stiffness Matrix of Subchain ({K_subchain.shape}):")
 print(K_subchain[5176*3:5176*3+3,5176*3:5176*3+3])
+hexahedral8Node.visualize_design_domain((num_elements_y,num_elements_x))
 
 force_vector = np.zeros((K_subchain.shape[0], 6))
+#fix_nodes = [0,1, 676, 677] + [24, 25, 700, 701]
 fix_nodes = [0,1, 2601, 2602] + [49, 50, 2650, 2651]
 subchain = SubchainFEA(K_subchain, force_vector, loading_nodes, N_func, dN_dxi_func, dN_deta_func, dN_dzeta_func, loading_J_inv_T, dof_per_node)
 subchain.define_force_vector(element_size_x)

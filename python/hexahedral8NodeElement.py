@@ -1,6 +1,6 @@
 import numpy as np
 import sympy as sp
-import pandas as pd
+import matplotlib.pyplot as plt
 
 from scipy.sparse import lil_matrix, csr_matrix
 from tqdm import tqdm
@@ -11,7 +11,7 @@ class Hexahedral8NodeElement:
     def __init__(self, E, nu):
         self.E = E
         self.nu = nu
-        self.loading_point = 2475
+        self.loading_point = 2474
         self.D = self.construct_D_matrix()
         self.xi, self.eta, self.zeta = sp.symbols('xi eta zeta')
         self.N = self.define_shape_functions()
@@ -20,6 +20,8 @@ class Hexahedral8NodeElement:
         self.dN_dxi_func = [sp.lambdify((self.xi, self.eta, self.zeta), dN) for dN in self.dN_dxi]
         self.dN_deta_func = [sp.lambdify((self.xi, self.eta, self.zeta), dN) for dN in self.dN_deta]
         self.dN_dzeta_func = [sp.lambdify((self.xi, self.eta, self.zeta), dN) for dN in self.dN_dzeta]
+        #self.solid_elements = list(range(0,550,25))+list(range(550,575))+list(range(24,574,25)) + [575+12,600+12]
+        self.solid_elements = list(range(0,2350,50))+list(range(2350,2400))+list(range(49,2399,50)) + list(range(451,1701,50))+list(range(2309,2319))+list(range(2331,2341))+list(range(498,1748,50)) + [2400+24,2450+24]
 
     def define_shape_functions(self):
         xi, eta, zeta = self.xi, self.eta, self.zeta
@@ -176,9 +178,8 @@ class Hexahedral8NodeElement:
             K_FE = self.compute_element_stiffness_matrix(nodes_physical)
             
             p = 1E-6
-            solid_elements = list(range(0,2350,50))+list(range(2350,2400))+list(range(49,2399,50))+[2400+25,2450+25]
             #Hexahedral8NodeElement.visualize_design_domain(solid_elements,(num_elements_y,num_elements_x))
-            if element_idx not in solid_elements:
+            if element_idx not in self.solid_elements:
                 K_FE = p * K_FE
             for local_i in range(8):  # Loop over local nodes
                 for local_j in range(8):
@@ -205,6 +206,26 @@ class Hexahedral8NodeElement:
         loading_J_inv_T = loading_J_inv.T
         return self.loading_nodes, self.N_func, self.dN_dxi_func, self.dN_deta_func, self.dN_dzeta_func, loading_J_inv_T
     
+    def visualize_design_domain(self, domain_size):
+        design_domain = np.zeros(domain_size)
+        for element in self.solid_elements:
+            design_domain[element//domain_size[0],element%domain_size[1]] = 1
+        
+        # Plotting the design domain
+        plt.figure(figsize=(8, 8))
+        plt.imshow(design_domain, cmap='gray_r', origin='lower')
+        plt.title('Design Domain with Solid and Void Elements')
+        plt.xlabel('X-axis')
+        plt.ylabel('Y-axis')
+        plt.grid(True, which='both', color='black', linestyle='-', linewidth=0.5)
+        plt.xticks(np.arange(-0.5, domain_size[0], 1), np.arange(0, domain_size[0] + 1, 1), rotation=90)
+        plt.yticks(np.arange(-0.5, domain_size[1], 1), np.arange(0, domain_size[1] + 1, 1))
+        plt.show(block=True)
+
+        # Wait for user input to close the plot
+        input("Press any key to close the plot and continue...")
+        plt.close()
+
     @staticmethod
     def enforce_symmetry(matrix):
         rows, cols = matrix.shape
@@ -214,13 +235,3 @@ class Hexahedral8NodeElement:
                 matrix[i, j] = avg_value
                 matrix[j, i] = avg_value
         return matrix
-    
-    @staticmethod
-    def visualize_design_domain(solid_elements,domain_size):
-        pd.set_option('display.max_rows', None)
-        pd.set_option('display.max_columns', None)
-        design_domain = np.zeros(domain_size)
-        for element in solid_elements:
-            design_domain[element//domain_size[0],element%domain_size[1]] = 1
-        df = pd.DataFrame(design_domain)
-        print(df)
