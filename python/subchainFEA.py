@@ -4,71 +4,70 @@ from scipy.sparse.linalg import spsolve
 from tqdm import tqdm
 
 class SubchainFEA:
-    def __init__(self, K_subchain, force_vector, loading_nodes, N_func, dN_dxi_func, dN_deta_func, dN_dzeta_func, loading_J_inv_T, dof_per_node):
+    def __init__(self, K_subchain, force_vector, loading_nodes, N_func, N_func_diff, loading_J_inv_T, dof_per_node):
         self.K_sc = K_subchain  # Use CSC format for efficiency in solving
         self.F = force_vector   # Use LIL format for constructing the force vector
         self.loading_nodes = loading_nodes  
         self.N_func = N_func
-        self.dN_dxi_func = dN_dxi_func
-        self.dN_deta_func = dN_deta_func
-        self.dN_dzeta_func = dN_dzeta_func
+        self.dN_dxi_func = N_func_diff[0]
+        self.dN_deta_func = N_func_diff[1]
+        self.dN_dzeta_func = N_func_diff[2]
         self.loading_J_inv_T = loading_J_inv_T
         self.dof_per_node = dof_per_node
 
-    def define_force_vector(self, element_size_x):
+    def define_force_vector(self, element_type, a, b):
         load = 1/len(self.loading_nodes)
-        mx_y = ['+','+','+','+', '-','-','-','-']
-        mx_z = ['-','-','+','+', '-','-','+','+']
-        my_x = ['-','-','-','-', '+','+','+','+']
-        my_z = ['+','-','-','+', '+','-','-','+']
-        mz_x = ['+','+','-','-', '+','+','-','-']
-        mz_y = ['-','+','+','-', '-','+','+','-']
+        if element_type=='hexahedral8':
+            # mx_y = ['+','+','+','+', '-','-','-','-']
+            # mx_z = ['-','-','+','+', '-','-','+','+']
+            # my_x = ['-','-','-','-', '+','+','+','+']
+            # my_z = ['+','-','-','+', '+','-','-','+']
+            # mz_x = ['+','+','-','-', '+','+','-','-']
+            # mz_y = ['-','+','+','-', '-','+','+','-']
+            mx_y = ['+','+','-','-']
+            mx_z = [0]*4
+            my_x = ['-','-','+','+']
+            my_z = ['-','+','-','+']
+            mz_x = [0]*4
+            mz_y = ['+','-','+','-']
+        elif element_type=='hexahedral20':
+            fx = [self.N_func[0](-1,0,0), 
+                  self.N_func[1](-1,0,0), 
+                  self.N_func[2](-1,0,0), 
+                  self.N_func[3](-1,0,0), 
+                  self.N_func[4](-1,0,0), 
+                  self.N_func[5](-1,0,0),
+                  self.N_func[6](-1,0,0),
+                  self.N_func[7](-1,0,0)]            
+
         for i, node in enumerate(self.loading_nodes):
             start_row = node * self.dof_per_node
 
-            self.F[start_row, 0] = load  # Load in x 
-            self.F[start_row+1, 1] = load  # Load in y 
-            self.F[start_row+2, 2] = load  # Load in z 
+            self.F[start_row, 0] = fx[i]  # Load in x 
+            # self.F[start_row+1, 1] = fy[i]  # Load in y 
+            # self.F[start_row+2, 2] = fz[i]  # Load in z 
 
-            if mx_y[i]=='+':
-                self.F[start_row+1, 3] = load/(element_size_x/2)  # Moment about x 
-            elif mx_y[i]=='-':
-                self.F[start_row+1, 3] = -load/(element_size_x/2)  # Moment about x 
-            if mx_z[i]=='+':
-                self.F[start_row+2, 3] = load/(element_size_x/2)  # Moment about x 
-            elif mx_z[i]=='-':
-                self.F[start_row+2, 3] = -load/(element_size_x/2)  # Moment about x 
+            # self.F[start_row+1, 3] = mx[i]
+            # self.F[start_row+2, 3] = 0
 
-            if my_x[i]=='+':
-                self.F[start_row, 4] = load/(element_size_x/2)  # Moment about y 
-            elif my_x[i]=='-':
-                self.F[start_row, 4] = -load/(element_size_x/2)  # Moment about y
-            if my_z[i]=='+':
-                self.F[start_row+2, 4] = load/(element_size_x/2)  # Moment about y
-            elif my_z[i]=='-':
-                self.F[start_row+2, 4] = -load/(element_size_x/2)  # Moment about y 
+            # self.F[start_row, 4] = my_x[i]
+            # self.F[start_row+2, 4] = my_z[i]
 
-            if mz_x[i]=='+':
-                self.F[start_row, 5] = load/(element_size_x/2)  # Moment about z 
-            elif mz_x[i]=='-':
-                self.F[start_row, 5] = -load/(element_size_x/2)  # Moment about z 
-            if mz_y[i]=='+':
-                self.F[start_row+1, 5] = load/(element_size_x/2)  # Moment about z
-            elif mz_y[i]=='-':
-                self.F[start_row+1, 5] = -load/(element_size_x/2)  # Moment about z
+            # self.F[start_row, 5] = 0
+            # self.F[start_row+1, 5] = mz[i]
 
             print(f"Force at node {node}:")
             print(self.F[node*3:node*3+3,:])
 
-    def apply_boundary_conditions(self, fix_nodes):
+    def apply_boundary_conditions(self, support_nodes):
         print("Applying boundary conditions...", flush=True)
-        for node in tqdm(fix_nodes):
+        for node in tqdm(support_nodes):
             start_row = node * self.dof_per_node
             start_col = start_row
             for i in range(self.dof_per_node):
                 self.K_sc[start_row+i, :] = 0
                 self.K_sc[:, start_col+i] = 0
-                self.K_sc[start_row+i, start_col+i] = 1.0
+                self.K_sc[start_row+i, start_col+i] = 1
                 self.F[start_row+i, :] = 0
 
     def compute_deformation_matrix(self):
@@ -85,16 +84,18 @@ class SubchainFEA:
         for i, node in enumerate(self.loading_nodes):
             start_col = node * self.dof_per_node
 
-            self.A[0, start_col] = self.N_func[i](0,0,0)
-            self.A[1, start_col + 1] = self.N_func[i](0,0,0)
-            self.A[2, start_col + 2] = self.N_func[i](0,0,0)
+            self.A[0, start_col] = self.N_func[i](-1,0,0)
+            # self.A[1, start_col + 1] = self.N_func[i](-1,0,0)
+            # self.A[2, start_col + 2] = self.N_func[i](-1,0,0)
+            
+            # self.A[3, start_col + 1] = -1/2*(self.dN_dxi_func[i](-1,0,0)*self.loading_J_inv_T[2,0] + self.dN_deta_func[i](-1,0,0)*self.loading_J_inv_T[2,1] + self.dN_dzeta_func[i](-1,0,0)*self.loading_J_inv_T[2,2])
+            # self.A[3, start_col + 2] = 1/2*(self.dN_dxi_func[i](-1,0,0)*self.loading_J_inv_T[1,0] + self.dN_deta_func[i](-1,0,0)*self.loading_J_inv_T[1,1] + self.dN_dzeta_func[i](-1,0,0)*self.loading_J_inv_T[1,2])
 
-            self.A[3, start_col + 1] = -1/2*(self.dN_dxi_func[i](0,0,0)*self.loading_J_inv_T[2,0] + self.dN_deta_func[i](0,0,0)*self.loading_J_inv_T[2,1] + self.dN_dzeta_func[i](0,0,0)*self.loading_J_inv_T[2,2])
-            self.A[3, start_col + 2] = 1/2*(self.dN_dxi_func[i](0,0,0)*self.loading_J_inv_T[1,0] + self.dN_deta_func[i](0,0,0)*self.loading_J_inv_T[1,1] + self.dN_dzeta_func[i](0,0,0)*self.loading_J_inv_T[1,2])
-            self.A[4, start_col] = 1/2*(self.dN_dxi_func[i](0,0,0)*self.loading_J_inv_T[2,0] + self.dN_deta_func[i](0,0,0)*self.loading_J_inv_T[2,1] + self.dN_dzeta_func[i](0,0,0)*self.loading_J_inv_T[2,2])
-            self.A[4, start_col + 2] = -1/2*(self.dN_dxi_func[i](0,0,0)*self.loading_J_inv_T[0,0] + self.dN_deta_func[i](0,0,0)*self.loading_J_inv_T[0,1] + self.dN_dzeta_func[i](0,0,0)*self.loading_J_inv_T[0,2])
-            self.A[5, start_col] = -1/2*(self.dN_dxi_func[i](0,0,0)*self.loading_J_inv_T[1,0] + self.dN_deta_func[i](0,0,0)*self.loading_J_inv_T[1,1] + self.dN_dzeta_func[i](0,0,0)*self.loading_J_inv_T[1,2])
-            self.A[5, start_col + 1] = 1/2*(self.dN_dxi_func[i](0,0,0)*self.loading_J_inv_T[0,0] + self.dN_deta_func[i](0,0,0)*self.loading_J_inv_T[0,1] + self.dN_dzeta_func[i](0,0,0)*self.loading_J_inv_T[0,2])
+            # self.A[4, start_col] = 1/2*(self.dN_dxi_func[i](-1,0,0)*self.loading_J_inv_T[2,0] + self.dN_deta_func[i](-1,0,0)*self.loading_J_inv_T[2,1] + self.dN_dzeta_func[i](-1,0,0)*self.loading_J_inv_T[2,2])
+            # self.A[4, start_col + 2] = -1/2*(self.dN_dxi_func[i](-1,0,0)*self.loading_J_inv_T[0,0] + self.dN_deta_func[i](-1,0,0)*self.loading_J_inv_T[0,1] + self.dN_dzeta_func[i](-1,0,0)*self.loading_J_inv_T[0,2])
+
+            # self.A[5, start_col] = 1/2*(self.dN_dxi_func[i](-1,0,0)*self.loading_J_inv_T[1,0] + self.dN_deta_func[i](-1,0,0)*self.loading_J_inv_T[1,1] + self.dN_dzeta_func[i](-1,0,0)*self.loading_J_inv_T[1,2])
+            # self.A[5, start_col + 1] = -1/2*(self.dN_dxi_func[i](-1,0,0)*self.loading_J_inv_T[0,0] + self.dN_deta_func[i](-1,0,0)*self.loading_J_inv_T[0,1] + self.dN_dzeta_func[i](-1,0,0)*self.loading_J_inv_T[0,2])
 
     def extract_compliance_matrix(self):
         print("Extracting compliance matrix...", flush=True)

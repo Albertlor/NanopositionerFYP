@@ -8,10 +8,12 @@ from tqdm import tqdm
 np.set_printoptions(linewidth=np.inf)
 
 class Hexahedral8NodeElement:
-    def __init__(self, E, nu):
+    def __init__(self, E, nu, loading_point, support_point, element_size):
         self.E = E
         self.nu = nu
-        self.loading_point = 2474
+        self.loading_point = loading_point
+        self.support_point = support_point
+        self.element_size = element_size
         self.D = self.construct_D_matrix()
         self.xi, self.eta, self.zeta = sp.symbols('xi eta zeta')
         self.N = self.define_shape_functions()
@@ -123,7 +125,8 @@ class Hexahedral8NodeElement:
                     K_FE += w * B.T @ self.D @ B * J_det
         return K_FE
     
-    def define_connectivity(self, num_elements_x, num_elements_y, num_elements_z):
+    def define_connectivity(self, num_elements):
+        num_elements_x, num_elements_y, num_elements_z = num_elements
         connectivity = []
         for k in range(num_elements_z):
             for j in range(num_elements_y):
@@ -139,7 +142,8 @@ class Hexahedral8NodeElement:
                     connectivity.append([n0, n1, n3, n2, n4, n5, n7, n6])
         return connectivity
 
-    def assemble_subchain_stiffness_matrix(self, num_elements_x, num_elements_y, num_elements_z, element_size_x, element_size_y, element_size_z):
+    def assemble_subchain_stiffness_matrix(self, num_elements):
+        num_elements_x, num_elements_y, num_elements_z = num_elements
         dof_per_node = 3
         num_nodes_x = num_elements_x + 1
         num_nodes_y = num_elements_y + 1
@@ -148,8 +152,24 @@ class Hexahedral8NodeElement:
         size = num_nodes * dof_per_node
         K_subchain = lil_matrix((size, size))
 
-        connectivity = self.define_connectivity(num_elements_x, num_elements_y, num_elements_z)
-        self.loading_nodes = connectivity[self.loading_point]
+        connectivity = self.define_connectivity(num_elements)
+        self.loading_nodes = [
+            connectivity[self.loading_point][2],
+            connectivity[self.loading_point][3],
+            connectivity[self.loading_point][6],
+            connectivity[self.loading_point][7],
+            connectivity[self.loading_point][10],
+            connectivity[self.loading_point][14],
+            connectivity[self.loading_point][18],
+            connectivity[self.loading_point][19]
+        ]
+
+        self.support_nodes = []
+        for support in self.support_point:
+            nodes = [
+                connectivity[support][0], connectivity[support][1], connectivity[support][4], connectivity[support][5]
+            ]
+            self.support_nodes+=nodes
 
         for element_idx, element in enumerate(tqdm(connectivity)):
             # nodes_physical = np.array([
@@ -162,15 +182,10 @@ class Hexahedral8NodeElement:
             #     [element[6] % num_nodes_x * element_size_x, element[6] // num_nodes_x % num_nodes_y * element_size_y, element[6] // (num_nodes_x * num_nodes_y) * element_size_z],
             #     [element[7] % num_nodes_x * element_size_x, element[7] // num_nodes_x % num_nodes_y * element_size_y, element[7] // (num_nodes_x * num_nodes_y) * element_size_z]
             # ], dtype=float)
+            x, y, z = self.element_size
             nodes_physical = np.array([
-                [ 0, 0, 0],
-                [ 0.002, 0, 0],
-                [ 0.002, 0.002, 0],
-                [ 0, 0.002, 0],
-                [ 0, 0, 0.02],
-                [ 0.002, 0, 0.02],
-                [ 0.002, 0.002, 0.02],
-                [ 0, 0.002, 0.02]
+                [ 0, 0, 0], [ x, 0, 0], [ x, y, 0], [ 0, y, 0],
+                [ 0, 0, z], [ x, 0, z], [ x, y, z], [ 0, y, z]
             ])
             
             if element_idx==self.loading_point:
@@ -204,7 +219,11 @@ class Hexahedral8NodeElement:
         loading_J = self.construct_Jacobian_matrix(0, 0, 0, self.loading_nodes_coordinates)
         loading_J_inv = np.linalg.inv(loading_J)
         loading_J_inv_T = loading_J_inv.T
-        return self.loading_nodes, self.N_func, self.dN_dxi_func, self.dN_deta_func, self.dN_dzeta_func, loading_J_inv_T
+        N_func_diff = [self.dN_dxi_func, self.dN_deta_func, self.dN_dzeta_func]
+        return self.loading_nodes, self.N_func, N_func_diff, loading_J_inv_T
+    
+    def get_support_point_info(self):
+        return self.support_nodes
     
     def visualize_design_domain(self, domain_size):
         design_domain = np.zeros(domain_size)

@@ -1,0 +1,14 @@
+{
+    "supporting_points":[
+        0
+    ],
+    "local_supporting_nodes":[
+        0,1,4,5,8,12,16,17
+    ],
+    "loading_points":[
+        199
+    ],
+    "local_loading_nodes":[
+        2,3,6,7,10,14,18,19
+    ]
+}
