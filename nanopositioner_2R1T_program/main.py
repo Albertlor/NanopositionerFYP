@@ -1,11 +1,13 @@
 import numpy as np
+import time
 
-from finite_element_analysis.structures_library import cantilever_rect_beam, arch
+from finite_element_analysis.structures_library import cantilever_rect_beam, arch, fixed_fixed_rect_beam
 from finite_element_analysis.elements_library import C3D20
 from finite_element_analysis.model_generator import Model_Generator
 from finite_element_analysis.model_analyzer import Model_Analyzer
 
 
+start_time = time.perf_counter()
 ######################################################################################################################
 """
 Define Materials Properties
@@ -18,10 +20,12 @@ nu = 0.33 # Poisson ratio
 """
 Define Structural Geometry
 """
-# rect_beam = cantilever_rect_beam.Cantilever_Rect_Beam()
-# structure_info = rect_beam.create_structure()
-arch_structure = arch.Arch()
-structure_info = arch_structure.create_structure()
+rect_beam = cantilever_rect_beam.Cantilever_Rect_Beam()
+structure_info = rect_beam.create_structure()
+# arch_structure = arch.Arch()
+# structure_info = arch_structure.create_structure()
+# fixed_fixed_beam = fixed_fixed_rect_beam.Fixed_Fixed_Rect_Beam()
+# structure_info = fixed_fixed_beam.create_structure()
 num_ele_x, num_ele_y, num_ele_z = structure_info[0] # Number of elements
 x, y, z = structure_info[1] # Element size
 element_size = [x, y, z]
@@ -71,7 +75,7 @@ model = Model_Generator(
 model.assemble_subchain_stiffness_matrix()
 K_sc = model.get_subchain_stiffness_matrix()
 global_supporting_nodes = model.get_boundary_conditions()
-global_loading_nodes = model.get_loading_info()
+global_loading_nodes, connectivity = model.get_loading_info()
 print(K_sc)
 print(K_sc.shape)
 ######################################################################################################################
@@ -92,14 +96,39 @@ fea_analysis = Model_Analyzer(
                 )
 fea_analysis.define_force_vector()
 fea_analysis.apply_boundary_conditions()
-fea_analysis.compute_deformation_matrix()
+U = fea_analysis.compute_deformation_matrix()
+
+print("Preparing extraction matrix...", flush=True)
 fea_analysis.define_extraction_matrix()
 
+print("Extracting compliance matrix...", flush=True)
 C_extracted = fea_analysis.extract_compliance_matrix()
 K_extracted = np.linalg.inv(C_extracted)
 print(f"6x6 Compliance Matrix at Loading Point:")
 print(C_extracted)
 print(f"6x6 Stiffness Matrix at Loading Point:")
 print(K_extracted)
+
+end_time = time.perf_counter()
+elapsed_time = end_time - start_time
+print(f"Elapsed time: {elapsed_time} seconds",flush=True)
+
+# K_global = fea_analysis.assemble_global_stiffness_matrix(K_extracted)
+# print(f"Global K:")
+# print(K_global)
 ######################################################################################################################
 
+######################################################################################################################
+"""
+Visualization of FEA Result for Displacements
+"""
+# element_of_interest = list(range(200))
+# displacement_dict = {}
+# for element in element_of_interest:
+#     nodes_of_interest = [connectivity[element][i] for i in local_loading_nodes]
+#     fea_analysis.define_extraction_matrix(nodes_of_interest)
+
+#     C_extracted = fea_analysis.extract_compliance_matrix()
+#     displacement_dict[element] = C_extracted[2,2]
+# fea_analysis.displacement_visualization(displacement_dict)
+######################################################################################################################

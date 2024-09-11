@@ -91,7 +91,7 @@ class SubchainFEA:
             # self.A[3, start_col + 1] = -1/2*(self.dN_dxi_func[i](-1,0,0)*self.loading_J_inv_T[2,0] + self.dN_deta_func[i](-1,0,0)*self.loading_J_inv_T[2,1] + self.dN_dzeta_func[i](-1,0,0)*self.loading_J_inv_T[2,2])
             # self.A[3, start_col + 2] = 1/2*(self.dN_dxi_func[i](-1,0,0)*self.loading_J_inv_T[1,0] + self.dN_deta_func[i](-1,0,0)*self.loading_J_inv_T[1,1] + self.dN_dzeta_func[i](-1,0,0)*self.loading_J_inv_T[1,2])
 
-            # self.A[4, start_col] = 1/2*(self.dN_dxi_func[i](-1,0,0)*self.loading_J_inv_T[2,0] + self.dN_deta_func[i](-1,0,0)*self.loading_J_inv_T[2,1] + self.dN_dzeta_func[i](-1,0,0)*self.loading_J_inv_T[2,2])
+            # self.A[4, start_col] = 1/2*(s elf.dN_dxi_func[i](-1,0,0)*self.loading_J_inv_T[2,0] + self.dN_deta_func[i](-1,0,0)*self.loading_J_inv_T[2,1] + self.dN_dzeta_func[i](-1,0,0)*self.loading_J_inv_T[2,2])
             # self.A[4, start_col + 2] = -1/2*(self.dN_dxi_func[i](-1,0,0)*self.loading_J_inv_T[0,0] + self.dN_deta_func[i](-1,0,0)*self.loading_J_inv_T[0,1] + self.dN_dzeta_func[i](-1,0,0)*self.loading_J_inv_T[0,2])
 
             # self.A[5, start_col] = 1/2*(self.dN_dxi_func[i](-1,0,0)*self.loading_J_inv_T[1,0] + self.dN_deta_func[i](-1,0,0)*self.loading_J_inv_T[1,1] + self.dN_dzeta_func[i](-1,0,0)*self.loading_J_inv_T[1,2])

@@ -1,8 +1,6 @@
 import numpy as np
-import sympy as sp
 
-from scipy.sparse import lil_matrix, csr_matrix
-from tqdm import tqdm
+from numba import jit
 
 np.set_printoptions(linewidth=np.inf)
 
@@ -75,35 +73,42 @@ class Model_Generator:
         middle_num_nodes = (num_elements_x + 1) * (num_elements_y + 1)
         num_nodes = (bottom_num_nodes + top_num_nodes + middle_num_nodes)*num_elements_z - (num_elements_z - 1)*top_num_nodes
         size = num_nodes * dof_per_node
-        K_subchain = lil_matrix((size, size))
 
-        connectivity = self.define_connectivity()
+        self.connectivity = self.define_connectivity()
         self.global_loading_nodes = []
         for load in self.loading_point:
-            nodes1 = [connectivity[load][i] for i in self.local_loading_nodes]
+            nodes1 = [self.connectivity[load][i] for i in self.local_loading_nodes]
             self.global_loading_nodes+=nodes1
 
         self.global_supporting_nodes = []
         for support in self.supporting_point:
-            nodes2 = [connectivity[support][j] for j in self.local_supporting_nodes]
+            nodes2 = [self.connectivity[support][j] for j in self.local_supporting_nodes]
             self.global_supporting_nodes+=nodes2
 
-        for element_idx, element in enumerate(tqdm(connectivity)):    
-            K_FE = self.K_FE        
-            p = 1E-6
-            if element_idx not in self.solid_elements:
-                K_FE = p * K_FE
-            for local_i in range(20):  # Loop over local nodes
-                for local_j in range(20):
+        ### Helper function ###
+        @jit(nopython=True, parallel=True)
+        def assemble_subchain_stiffness_matrix_helper(connectivity, solid_elements, K_FE, K_subchain):
+            for element_idx, element in enumerate(connectivity):   
+                K_FE_local = K_FE
+                p = 1E-6
+                if element_idx not in solid_elements:
+                    K_FE_local = p * K_FE_local
+                for local_i in range(20):  # Loop over local nodes
                     global_i = element[local_i]
-                    global_j = element[local_j]
-                    for k in range(3):  # Loop over DOFs per node
-                        for l in range(3):
-                            GI = 3 * global_i + k
-                            GJ = 3 * global_j + l
-                            K_subchain[GI, GJ] += K_FE[3 * local_i + k, 3 * local_j + l]
-
-        self.K_subchain = csr_matrix(K_subchain).toarray()
+                    for local_j in range(20):
+                        global_j = element[local_j]
+                        for k in range(3): 
+                            for l in range(3):
+                                K_subchain[3 * global_i + k, 3 * global_j + l] += K_FE_local[3 * local_i + k, 3 * local_j + l]
+            return K_subchain
+        
+        K_subchain = np.zeros((size, size))
+        self.K_subchain = assemble_subchain_stiffness_matrix_helper(
+                                np.array(self.connectivity), 
+                                np.array(self.solid_elements), 
+                                np.array(self.K_FE.copy()), 
+                                K_subchain
+                            )
 
     def get_subchain_stiffness_matrix(self):
         print("Getting Subchain's Stiffness Matrix...", flush=True)
@@ -113,7 +118,7 @@ class Model_Generator:
         return self.global_supporting_nodes
     
     def get_loading_info(self):
-        return self.global_loading_nodes
+        return self.global_loading_nodes, self.connectivity
 
     @staticmethod
     def enforce_symmetry(matrix):

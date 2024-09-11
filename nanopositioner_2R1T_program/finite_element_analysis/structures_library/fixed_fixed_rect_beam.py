@@ -1,9 +1,9 @@
-class Cantilever_Rect_Beam:
+class Fixed_Fixed_Rect_Beam:
     def __init__(self):
-        self.supporting_points = [0]
-        self.local_supporting_nodes = [0,1,4,5,8,12,16,17]
-        self.loading_points = [199]
-        self.local_loading_nodes = [3,10,2,19,18,7,14,6]
+        self.supporting_points = [0, 199]
+        self.local_supporting_nodes = [0,1,4,5,8,12,16,17,2,3,6,7,10,14,18,19]
+        self.loading_points = [99]
+        self.local_loading_nodes = [2,3,6,7,10,14,18,19]
 
     def create_structure(self):
         #  ||  #
@@ -17,7 +17,7 @@ class Cantilever_Rect_Beam:
 
         element_size_x = 0.02
         element_size_y = 0.002
-        element_size_z = 0.02
+        element_size_z = 0.002
         element_size = [element_size_x, element_size_y, element_size_z]
 
         dof_per_node = 3
