@@ -33,7 +33,7 @@ dof_per_node = structure_info[2]
 solid_elements = structure_info[3]
 supporting_point, local_supporting_nodes = structure_info[4]
 loading_point, local_loading_nodes = structure_info[5]
-loading_center = (0,1,0)
+loading_center = (-1,1,0)
 
 nodes_physical = np.array([
     [0, 0, 0], [x, 0, 0], [x, y, 0], [0, y, 0],
