@@ -1,9 +1,10 @@
-class Euler_Bernoulli_Beam:
+class Timoshenko_Beam:
     def __init__(self):
         self.E = 71E9
         self.v = 0.33
         self.G = self.E/(2*(1+self.v))
-        self.L = 400E-3
+        self.k = 5/6 ### Shear correction factor
+        self.L = 40E-3
         self.W = 20E-3
         self.D = 20E-3
         self.Iz = 13333.3E-12
@@ -15,7 +16,7 @@ class Euler_Bernoulli_Beam:
     def fixed_free_end_point(self):
         c11 = (self.F*self.L**3) / (3*self.E*self.Iz)
         c22 = (self.F*self.L) / ((self.W*self.D)*self.E)
-        c61 = (self.F*self.L**2) / (2*self.E*self.Iz)
+        c61 = (self.F*self.L**2) / (2*self.E*self.Iz) + self.L / (self.k*self.G*(self.W*self.D))
 
         return c11, c22, c61
     
@@ -26,6 +27,6 @@ class Euler_Bernoulli_Beam:
     
 
 if __name__=='__main__':
-    beam = Euler_Bernoulli_Beam()
+    beam = Timoshenko_Beam()
     c11, c22, c61 = beam.fixed_free_end_point()
     print(f"x: {c11}, y:{c22}, slope_z: {c61}")

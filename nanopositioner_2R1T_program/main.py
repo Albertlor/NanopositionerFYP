@@ -26,6 +26,7 @@ structure_info = rect_beam.create_structure()
 # structure_info = arch_structure.create_structure()
 # fixed_fixed_beam = fixed_fixed_rect_beam.Fixed_Fixed_Rect_Beam()
 # structure_info = fixed_fixed_beam.create_structure()
+
 num_ele_x, num_ele_y, num_ele_z = structure_info[0] # Number of elements
 x, y, z = structure_info[1] # Element size
 element_size = [x, y, z]
@@ -33,7 +34,7 @@ dof_per_node = structure_info[2]
 solid_elements = structure_info[3]
 supporting_point, local_supporting_nodes = structure_info[4]
 loading_point, local_loading_nodes = structure_info[5]
-loading_center = (-1,1,0)
+loading_center = (0,1,0)
 
 nodes_physical = np.array([
     [0, 0, 0], [x, 0, 0], [x, y, 0], [0, y, 0],
@@ -122,13 +123,13 @@ print(f"Elapsed time: {elapsed_time} seconds",flush=True)
 """
 Visualization of FEA Result for Displacements
 """
-# element_of_interest = list(range(200))
-# displacement_dict = {}
-# for element in element_of_interest:
-#     nodes_of_interest = [connectivity[element][i] for i in local_loading_nodes]
-#     fea_analysis.define_extraction_matrix(nodes_of_interest)
+element_of_interest = list(range(200))
+displacement_dict = {}
+for element in element_of_interest:
+    nodes_of_interest = [connectivity[element][i] for i in local_loading_nodes]
+    fea_analysis.define_extraction_matrix(nodes_of_interest)
 
-#     C_extracted = fea_analysis.extract_compliance_matrix()
-#     displacement_dict[element] = C_extracted[2,2]
-# fea_analysis.displacement_visualization(displacement_dict)
+    C_extracted = fea_analysis.extract_compliance_matrix()
+    displacement_dict[element] = C_extracted[0,0]
+fea_analysis.displacement_visualization(displacement_dict)
 ######################################################################################################################

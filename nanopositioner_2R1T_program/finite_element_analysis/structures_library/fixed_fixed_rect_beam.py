@@ -17,7 +17,7 @@ class Fixed_Fixed_Rect_Beam:
 
         element_size_x = 0.02
         element_size_y = 0.002
-        element_size_z = 0.002
+        element_size_z = 0.02
         element_size = [element_size_x, element_size_y, element_size_z]
 
         dof_per_node = 3
