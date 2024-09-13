@@ -130,6 +130,8 @@ for element in element_of_interest:
     fea_analysis.define_extraction_matrix(nodes_of_interest)
 
     C_extracted = fea_analysis.extract_compliance_matrix()
-    displacement_dict[element] = C_extracted[0,0]
+    displacement_dict[element] = C_extracted[5,0]
+sum_of_disp = np.sum(np.array(displacement_dict.values()))
+print(f"theta_z: {sum_of_disp}")
 fea_analysis.displacement_visualization(displacement_dict)
 ######################################################################################################################

@@ -32,14 +32,14 @@ class Model_Analyzer:
             self.F[start_row+1, 1] = f[i]
             self.F[start_row+2, 2] = f[i]
 
-            self.F[start_row+1, 3] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_inv[0,2] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_inv[1,2] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_inv[2,2])
-            self.F[start_row+2, 3] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_inv[0,1] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_inv[1,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_inv[2,1])
+            self.F[start_row+1, 3] = -1/2*(self.dN_dzeta_func[i](c1, c2, c3))
+            self.F[start_row+2, 3] = 1/2*(self.dN_deta_func[i](c1, c2, c3))
 
-            self.F[start_row, 4] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_inv[0,2] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_inv[1,2] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_inv[2,2])
-            self.F[start_row+2, 4] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_inv[0,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_inv[1,0] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_inv[2,0])
+            self.F[start_row, 4] = 1/2*(self.dN_dzeta_func[i](c1, c2, c3))
+            self.F[start_row+2, 4] = -1/2*(self.dN_dxi_func[i](c1, c2, c3))
 
-            self.F[start_row, 5] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_inv[0,1] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_inv[1,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_inv[2,1])
-            self.F[start_row+1, 5] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_inv[0,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_inv[1,0] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_inv[2,0])
+            self.F[start_row, 5] = -1/2*(self.dN_deta_func[i](c1, c2, c3))
+            self.F[start_row+1, 5] = 1/2*(self.dN_dxi_func[i](c1, c2, c3))
 
             print(f"Force at node {node}:")
             print(self.F[node*3:node*3+3,:])
@@ -84,14 +84,14 @@ class Model_Analyzer:
             self.A[1, start_col+1] = self.N_func[i](c1, c2, c3)
             self.A[2, start_col+2] = self.N_func[i](c1, c2, c3)
 
-            self.A[3, start_col + 1] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_inv[0,2] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_inv[1,2] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_inv[2,2])
-            self.A[3, start_col + 2] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_inv[0,1] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_inv[1,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_inv[2,1])
+            self.A[3, start_col + 1] = -1/2*(self.dN_dzeta_func[i](c1, c2, c3))
+            self.A[3, start_col + 2] = 1/2*(self.dN_deta_func[i](c1, c2, c3))
 
-            self.A[4, start_col] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_inv[0,2] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_inv[1,2] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_inv[2,2])
-            self.A[4, start_col+2] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_inv[0,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_inv[1,0] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_inv[2,0])
+            self.A[4, start_col] = 1/2*(self.dN_dzeta_func[i](c1, c2, c3))
+            self.A[4, start_col+2] = -1/2*(self.dN_dxi_func[i](c1, c2, c3))
 
-            self.A[5, start_col] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_inv[0,1] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_inv[1,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_inv[2,1])
-            self.A[5, start_col+1] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_inv[0,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_inv[1,0] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_inv[2,0])
+            self.A[5, start_col] = -1/2*(self.dN_deta_func[i](c1, c2, c3))
+            self.A[5, start_col+1] = 1/2*(self.dN_dxi_func[i](c1, c2, c3))
 
     def extract_compliance_matrix(self):
         self.C_extracted = self.A @ self.U

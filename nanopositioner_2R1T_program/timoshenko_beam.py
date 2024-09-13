@@ -4,7 +4,7 @@ class Timoshenko_Beam:
         self.v = 0.33
         self.G = self.E/(2*(1+self.v))
         self.k = 5/6 ### Shear correction factor
-        self.L = 40E-3
+        self.L = 400E-3
         self.W = 20E-3
         self.D = 20E-3
         self.Iz = 13333.3E-12
