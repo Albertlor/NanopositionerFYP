@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 
 class Model_Analyzer:
-    def __init__(self, K_sc, loading_center, global_supporting_nodes, global_loading_nodes, N_func, N_func_diff, load_J_inv, dof_per_node):
+    def __init__(self, K_sc, loading_center, global_supporting_nodes, global_loading_nodes, N_func, N_func_diff, load_J_invT, dof_per_node):
         self.K_sc = K_sc
         self.loading_center = loading_center
         self.global_supporting_nodes = global_supporting_nodes
@@ -17,7 +17,7 @@ class Model_Analyzer:
         self.dN_dxi_func = N_func_diff[0]
         self.dN_deta_func = N_func_diff[1]
         self.dN_dzeta_func = N_func_diff[2]
-        self.load_J_inv = load_J_inv
+        self.load_J_invT = load_J_invT
         self.dof_per_node = dof_per_node
 
     def define_force_vector(self):
@@ -32,14 +32,14 @@ class Model_Analyzer:
             self.F[start_row+1, 1] = f[i]
             self.F[start_row+2, 2] = f[i]
 
-            self.F[start_row+1, 3] = -1/2*(self.dN_dzeta_func[i](c1, c2, c3))
-            self.F[start_row+2, 3] = 1/2*(self.dN_deta_func[i](c1, c2, c3))
+            self.F[start_row+1, 3] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[2,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[2,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[2,2])
+            self.F[start_row+2, 3] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[1,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[1,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[1,2])
 
-            self.F[start_row, 4] = 1/2*(self.dN_dzeta_func[i](c1, c2, c3))
-            self.F[start_row+2, 4] = -1/2*(self.dN_dxi_func[i](c1, c2, c3))
+            self.F[start_row, 4] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[2,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[2,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[2,2])
+            self.F[start_row+2, 4] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[0,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[0,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[0,2])
 
-            self.F[start_row, 5] = -1/2*(self.dN_deta_func[i](c1, c2, c3))
-            self.F[start_row+1, 5] = 1/2*(self.dN_dxi_func[i](c1, c2, c3))
+            self.F[start_row, 5] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[1,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[1,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[1,2])
+            self.F[start_row+1, 5] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[0,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[0,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[0,2])
 
             print(f"Force at node {node}:")
             print(self.F[node*3:node*3+3,:])
@@ -84,22 +84,22 @@ class Model_Analyzer:
             self.A[1, start_col+1] = self.N_func[i](c1, c2, c3)
             self.A[2, start_col+2] = self.N_func[i](c1, c2, c3)
 
-            self.A[3, start_col + 1] = -1/2*(self.dN_dzeta_func[i](c1, c2, c3))
-            self.A[3, start_col + 2] = 1/2*(self.dN_deta_func[i](c1, c2, c3))
+            self.A[3, start_col + 1] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[2,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[2,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[2,2])
+            self.A[3, start_col + 2] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[1,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[1,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[1,2])
 
-            self.A[4, start_col] = 1/2*(self.dN_dzeta_func[i](c1, c2, c3))
-            self.A[4, start_col+2] = -1/2*(self.dN_dxi_func[i](c1, c2, c3))
+            self.A[4, start_col] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[2,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[2,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[2,2])
+            self.A[4, start_col+2] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[0,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[0,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[0,2])
 
-            self.A[5, start_col] = -1/2*(self.dN_deta_func[i](c1, c2, c3))
-            self.A[5, start_col+1] = 1/2*(self.dN_dxi_func[i](c1, c2, c3))
+            self.A[5, start_col] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[1,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[1,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[1,2])
+            self.A[5, start_col+1] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[0,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[0,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[0,2])
 
     def extract_compliance_matrix(self):
         self.C_extracted = self.A @ self.U
         return self.C_extracted.round(9)
     
     def assemble_global_stiffness_matrix(self, K_extracted):
-        K_global = np.zeros((K_extracted.shape))
-        p = 0.06
+        K_EE = np.zeros((K_extracted.shape))
+        p = 0.01
 
         theta1_z = np.pi/6
         p1_x = p*np.cos(theta1_z)
@@ -112,6 +112,15 @@ class Model_Analyzer:
             [0, 0, 0,  1,    0,    0   ],
             [0, 0, 0,  0,    1,    0   ],
             [0, 0, 0,  0,    0,    1   ]
+        ])
+        theta1 = -2*np.pi/3
+        R1 = np.array([
+            [np.cos(theta1), -np.sin(theta1), 0, 0,               0,              0],
+            [np.sin(theta1),  np.cos(theta1), 0, 0,               0,              0],
+            [0,               0,              1, 0,               0,              0],
+            [0,               0,              0, np.cos(theta1), -np.sin(theta1), 0],
+            [0,               0,              0, np.sin(theta1),  np.cos(theta1), 0],
+            [0,               0,              0, 0,               0,              1]
         ])
 
         theta2_z = 5*np.pi/6
@@ -126,6 +135,15 @@ class Model_Analyzer:
             [0, 0, 0,  0,    1,    0   ],
             [0, 0, 0,  0,    0,    1   ]
         ])
+        theta2 = 2*np.pi/3
+        R2 = np.array([
+            [np.cos(theta2), -np.sin(theta2), 0, 0,               0,              0],
+            [np.sin(theta2),  np.cos(theta2), 0, 0,               0,              0],
+            [0,               0,              1, 0,               0,              0],
+            [0,               0,              0, np.cos(theta2), -np.sin(theta2), 0],
+            [0,               0,              0, np.sin(theta2),  np.cos(theta2), 0],
+            [0,               0,              0, 0,               0,              1]
+        ])
 
         theta3_z = 3*np.pi/2
         p3_x = p*np.cos(theta3_z)
@@ -139,14 +157,22 @@ class Model_Analyzer:
             [0, 0, 0,  0,    1,    0   ],
             [0, 0, 0,  0,    0,    1   ]
         ])
+        theta3 = 0
+        R3 = np.array([
+            [np.cos(theta3), -np.sin(theta3), 0, 0,               0,              0],
+            [np.sin(theta3),  np.cos(theta3), 0, 0,               0,              0],
+            [0,               0,              1, 0,               0,              0],
+            [0,               0,              0, np.cos(theta3), -np.sin(theta3), 0],
+            [0,               0,              0, np.sin(theta3),  np.cos(theta3), 0],
+            [0,               0,              0, 0,               0,              1]
+        ])
 
-        J = [J1, J2, J3]
-        self.K_global = np.zeros((K_extracted.shape[0], K_extracted.shape[1]))
+        Adj = [J1@R1, J2@R2, J3@R3]
         for i in range(3):
-            J_inv = np.linalg.inv(J[i])
-            K_global += (J_inv.T @ K_extracted @ J_inv)
+            Adj_inv = np.linalg.inv(Adj[i])
+            K_EE += (Adj_inv.T @ K_extracted @ Adj_inv)
         
-        return K_global
+        return K_EE.round(6)
     
     def displacement_visualization(self, displacement_dict):
         # Extract the x and y values from the dictionary

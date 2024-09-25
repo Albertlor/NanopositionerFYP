@@ -51,7 +51,9 @@ Create Element
 """
 hexahedral20 = C3D20.Hexahedral20NodeElement(E, nu)
 K_FE = hexahedral20.compute_element_stiffness_matrix(nodes_physical)
-load_J_inv = hexahedral20.get_jacobian_matrix(loading_center, nodes_physical) # Jacobian matrix for loading element
+load_J = hexahedral20.get_jacobian_matrix(loading_center, nodes_physical) # Jacobian matrix for loading element
+load_J_inv = np.linalg.inv(load_J).round(9)
+load_J_invT = load_J_inv.T
 N_func, dN_dxi_func, dN_deta_func, dN_dzeta_func = hexahedral20.get_shape_functions()
 N_func = [N_func[i] for i in local_loading_nodes] # Shape functions for loading nodes
 N_func_diff = [
@@ -92,7 +94,7 @@ fea_analysis = Model_Analyzer(
                     global_loading_nodes,
                     N_func,
                     N_func_diff,
-                    load_J_inv,
+                    load_J_invT,
                     dof_per_node
                 )
 fea_analysis.define_force_vector()
@@ -110,13 +112,13 @@ print(C_extracted)
 print(f"6x6 Stiffness Matrix at Loading Point:")
 print(K_extracted)
 
+K_EE = fea_analysis.assemble_global_stiffness_matrix(K_extracted)
+print(f"Stiffness Matrix of End Effector:")
+print(K_EE)
+
 end_time = time.perf_counter()
 elapsed_time = end_time - start_time
 print(f"Elapsed time: {elapsed_time} seconds",flush=True)
-
-# K_global = fea_analysis.assemble_global_stiffness_matrix(K_extracted)
-# print(f"Global K:")
-# print(K_global)
 ######################################################################################################################
 
 ######################################################################################################################
@@ -131,7 +133,7 @@ for element in element_of_interest:
 
     C_extracted = fea_analysis.extract_compliance_matrix()
     displacement_dict[element] = C_extracted[5,0]
-sum_of_disp = np.sum(np.array(displacement_dict.values()))
-print(f"theta_z: {sum_of_disp}")
+# sum_of_disp = np.sum(np.array(displacement_dict.values()))
+# print(f"theta_z: {sum_of_disp}")
 fea_analysis.displacement_visualization(displacement_dict)
 ######################################################################################################################

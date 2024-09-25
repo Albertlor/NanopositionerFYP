@@ -59,7 +59,7 @@ class Hexahedral20NodeElement:
             J[2, 0] += self.dN_dxi_func[i](xi, eta, zeta) * nodes_physical[i, 2]
             J[2, 1] += self.dN_deta_func[i](xi, eta, zeta) * nodes_physical[i, 2]
             J[2, 2] += self.dN_dzeta_func[i](xi, eta, zeta) * nodes_physical[i, 2]
-        return J
+        return J.round(9)
 
     def construct_B_matrix(self, xi, eta, zeta, J_inv_T):
         B1 = np.array([
@@ -118,7 +118,7 @@ class Hexahedral20NodeElement:
         for i, xi in enumerate(gauss_points):
             for j, eta in enumerate(gauss_points):
                 for k, zeta in enumerate(gauss_points):
-                    J = self.construct_Jacobian_matrix(xi, eta, zeta, nodes_physical).round(9)
+                    J = self.construct_Jacobian_matrix(xi, eta, zeta, nodes_physical)
                     J_inv = np.linalg.inv(J).round(9)
                     J_inv_T = J_inv.T
                     J_det = np.linalg.det(J)
@@ -129,9 +129,9 @@ class Hexahedral20NodeElement:
         return K_FE
     
     def get_jacobian_matrix(self, coors, nodes_physical):
-        J = self.construct_Jacobian_matrix(coors[0], coors[1], coors[2], nodes_physical).round(9)
-        J_inv = np.linalg.inv(J).round(9)
-        return J_inv
+        J = self.construct_Jacobian_matrix(coors[0], coors[1], coors[2], nodes_physical)
+        #J_inv = np.linalg.inv(J).round(9)
+        return J
     
     def get_shape_functions(self):
         return self.N_func, self.dN_dxi_func, self.dN_deta_func, self.dN_dzeta_func
