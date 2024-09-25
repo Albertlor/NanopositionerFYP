@@ -59,7 +59,7 @@ class Hexahedral20NodeElement:
             J[2, 0] += self.dN_dxi_func[i](xi, eta, zeta) * nodes_physical[i, 2]
             J[2, 1] += self.dN_deta_func[i](xi, eta, zeta) * nodes_physical[i, 2]
             J[2, 2] += self.dN_dzeta_func[i](xi, eta, zeta) * nodes_physical[i, 2]
-        return J.round(9)
+        return J
 
     def construct_B_matrix(self, xi, eta, zeta, J_inv_T):
         B1 = np.array([
@@ -134,4 +134,4 @@ class Hexahedral20NodeElement:
         return J
     
     def get_shape_functions(self):
-        return self.N_func, self.dN_dxi_func, self.dN_deta_func, self.dN_dzeta_func
+        return self.N_func, [self.dN_dxi_func, self.dN_deta_func, self.dN_dzeta_func]

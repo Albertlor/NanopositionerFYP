@@ -24,7 +24,7 @@ class Model_Analyzer:
         self.F = np.zeros((self.K_sc.shape[0], 6))
         c1, c2, c3 = self.loading_center
         f = [N(c1, c2, c3) for N in self.N_func]
-        print(self.global_loading_nodes)
+        
         for i, node in enumerate(self.global_loading_nodes):
             start_row = node * self.dof_per_node
 
@@ -41,8 +41,8 @@ class Model_Analyzer:
             self.F[start_row, 5] = -1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[1,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[1,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[1,2])
             self.F[start_row+1, 5] = 1/2*(self.dN_dxi_func[i](c1, c2, c3)*self.load_J_invT[0,0] + self.dN_deta_func[i](c1, c2, c3)*self.load_J_invT[0,1] + self.dN_dzeta_func[i](c1, c2, c3)*self.load_J_invT[0,2])
 
-            print(f"Force at node {node}:")
-            print(self.F[node*3:node*3+3,:])
+            # print(f"Force at node {node}:")
+            # print(self.F[node*3:node*3+3,:])
 
     def apply_boundary_conditions(self):
         print("Applying boundary conditions...", flush=True)
@@ -66,9 +66,9 @@ class Model_Analyzer:
         #         self.U = np.hstack((self.U,U))
         self.U = spsolve(self.K_sc_sparse, self.F)
         #self.U = np.linalg.solve(self.K_sc,self.F)
-        for node in self.global_loading_nodes:
-            print(f"Global nodal deformations at node {node}:")
-            print(self.U[node*3:node*3+3,:])
+        # for node in self.global_loading_nodes:
+        #     print(f"Global nodal deformations at node {node}:")
+        #     print(self.U[node*3:node*3+3,:])
         return self.U
 
     def define_extraction_matrix(self,node_of_interest=None):

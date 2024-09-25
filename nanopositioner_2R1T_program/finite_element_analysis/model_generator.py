@@ -85,30 +85,67 @@ class Model_Generator:
             nodes2 = [self.connectivity[support][j] for j in self.local_supporting_nodes]
             self.global_supporting_nodes+=nodes2
 
-        ### Helper function ###
-        @jit(nopython=True, parallel=True)
-        def assemble_subchain_stiffness_matrix_helper(connectivity, solid_elements, K_FE, K_subchain):
-            for element_idx, element in enumerate(connectivity):   
-                K_FE_local = K_FE
-                p = 1E-6
-                if element_idx not in solid_elements:
-                    K_FE_local = p * K_FE_local
-                for local_i in range(20):  # Loop over local nodes
-                    global_i = element[local_i]
-                    for local_j in range(20):
-                        global_j = element[local_j]
-                        for k in range(3): 
-                            for l in range(3):
-                                K_subchain[3 * global_i + k, 3 * global_j + l] += K_FE_local[3 * local_i + k, 3 * local_j + l]
-            return K_subchain
-        
+        p = 1E-6
+        num_elements = len(self.connectivity)
+        element_dof = 20 * dof_per_node  # Number of DOFs per element (20 nodes * 3 DOFs per node = 60)
+
+        # Precompute the DOF mapping for all elements
+        element_nodes = np.array(self.connectivity)  # Shape: (num_elements, 20)
+        dof_indices = element_nodes[:, :, np.newaxis] * dof_per_node + np.arange(dof_per_node)
+        # Reshape to (num_elements, element_dof)
+        dof_maps = dof_indices.reshape(num_elements, element_dof)
+
+        # Create scaling factors array
+        scaling_factors = np.ones(num_elements)
+        scaling_factors[:] = p  # Initialize all to 'p' (void elements)
+        scaling_factors[self.solid_elements] = 1.0  # Set solid elements to 1.0
+
+        # Create K_local_all array
+        K_FE = self.K_FE
+        # K_FE has shape (60, 60)
+        # K_local_all will have shape (num_elements, 60, 60)
+        K_local_all = K_FE[np.newaxis, :, :] * scaling_factors[:, np.newaxis, np.newaxis]
+
+        # Now, assemble K_subchain as a dense NumPy array
         K_subchain = np.zeros((size, size))
-        self.K_subchain = assemble_subchain_stiffness_matrix_helper(
-                                np.array(self.connectivity), 
-                                np.array(self.solid_elements), 
-                                np.array(self.K_FE.copy()), 
-                                K_subchain
-                            )
+
+        # Map local stiffness matrices into the global stiffness matrix
+        # Use vectorized operations where possible
+        print("Mapping local stiffness matrices into the global stiffness matrix...", flush=True)
+        for i in range(num_elements):
+            # Get the global DOF indices for the element
+            dofs = dof_maps[i]
+            # Get the local stiffness matrix for the element
+            K_local = K_local_all[i]
+            # Map the local stiffness matrix into the global stiffness matrix
+            K_subchain[np.ix_(dofs, dofs)] += K_local
+
+        self.K_subchain = K_subchain
+
+        # ### Helper function ###
+        # @jit(nopython=True, parallel=True)
+        # def assemble_subchain_stiffness_matrix_helper(connectivity, solid_elements, K_FE, K_subchain):
+        #     for element_idx, element in enumerate(connectivity):   
+        #         K_FE_local = K_FE
+        #         p = 1E-6
+        #         if element_idx not in solid_elements:
+        #             K_FE_local = p * K_FE_local
+        #         for local_i in range(20):  # Loop over local nodes
+        #             global_i = element[local_i]
+        #             for local_j in range(20):
+        #                 global_j = element[local_j]
+        #                 for k in range(3): 
+        #                     for l in range(3):
+        #                         K_subchain[3 * global_i + k, 3 * global_j + l] += K_FE_local[3 * local_i + k, 3 * local_j + l]
+        #     return K_subchain
+        
+        # K_subchain = np.zeros((size, size))
+        # self.K_subchain = assemble_subchain_stiffness_matrix_helper(
+        #                         np.array(self.connectivity), 
+        #                         np.array(self.solid_elements), 
+        #                         np.array(self.K_FE.copy()), 
+        #                         K_subchain
+        #                     )
 
     def get_subchain_stiffness_matrix(self):
         print("Getting Subchain's Stiffness Matrix...", flush=True)

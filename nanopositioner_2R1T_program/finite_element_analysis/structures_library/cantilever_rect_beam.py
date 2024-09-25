@@ -4,6 +4,7 @@ class Cantilever_Rect_Beam:
         self.local_supporting_nodes = [0,1,4,5,8,12,16,17]
         self.loading_points = [199]
         self.local_loading_nodes = list(range(20))
+        # self.local_loading_nodes = [3,10,2,19,18,7,14,6]
 
     def create_structure(self):
         #  ||  #

@@ -3,7 +3,8 @@ class Arch:
         self.supporting_points = [0, 24]
         self.local_supporting_nodes = [0,1,4,5,8,12,16,17]
         self.loading_points = [612]
-        self.local_loading_nodes = [2,3,6,7,10,14,18,19]
+        self.local_loading_nodes = list(range(20))
+        # self.local_loading_nodes = [2,3,6,7,10,14,18,19]
 
     def create_structure(self):
         #  ||  #

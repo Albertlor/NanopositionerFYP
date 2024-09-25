@@ -20,10 +20,10 @@ nu = 0.33 # Poisson ratio
 """
 Define Structural Geometry
 """
-rect_beam = cantilever_rect_beam.Cantilever_Rect_Beam()
-structure_info = rect_beam.create_structure()
-# arch_structure = arch.Arch()
-# structure_info = arch_structure.create_structure()
+# rect_beam = cantilever_rect_beam.Cantilever_Rect_Beam()
+# structure_info = rect_beam.create_structure()
+arch_structure = arch.Arch()
+structure_info = arch_structure.create_structure()
 # fixed_fixed_beam = fixed_fixed_rect_beam.Fixed_Fixed_Rect_Beam()
 # structure_info = fixed_fixed_beam.create_structure()
 
@@ -54,13 +54,7 @@ K_FE = hexahedral20.compute_element_stiffness_matrix(nodes_physical)
 load_J = hexahedral20.get_jacobian_matrix(loading_center, nodes_physical) # Jacobian matrix for loading element
 load_J_inv = np.linalg.inv(load_J).round(9)
 load_J_invT = load_J_inv.T
-N_func, dN_dxi_func, dN_deta_func, dN_dzeta_func = hexahedral20.get_shape_functions()
-N_func = [N_func[i] for i in local_loading_nodes] # Shape functions for loading nodes
-N_func_diff = [
-    [dN_dxi_func[i] for i in local_loading_nodes], 
-    [dN_deta_func[j] for j in local_loading_nodes],
-    [dN_dzeta_func[k] for k in local_loading_nodes]
-] # Derivative of shape functions for loading nodes
+N_func, N_func_diff = hexahedral20.get_shape_functions()
 ######################################################################################################################
 
 ######################################################################################################################
@@ -79,7 +73,7 @@ model.assemble_subchain_stiffness_matrix()
 K_sc = model.get_subchain_stiffness_matrix()
 global_supporting_nodes = model.get_boundary_conditions()
 global_loading_nodes, connectivity = model.get_loading_info()
-print(K_sc)
+#print(K_sc)
 print(K_sc.shape)
 ######################################################################################################################
 
@@ -123,17 +117,15 @@ print(f"Elapsed time: {elapsed_time} seconds",flush=True)
 
 ######################################################################################################################
 """
-Visualization of FEA Result for Displacements
+Visualization of FEA Result for Displacements (Uncomment only if you want to visualize the displacements)
 """
-element_of_interest = list(range(200))
-displacement_dict = {}
-for element in element_of_interest:
-    nodes_of_interest = [connectivity[element][i] for i in local_loading_nodes]
-    fea_analysis.define_extraction_matrix(nodes_of_interest)
+# element_of_interest = list(range(200))
+# displacement_dict = {}
+# for element in element_of_interest:
+#     nodes_of_interest = [connectivity[element][i] for i in local_loading_nodes]
+#     fea_analysis.define_extraction_matrix(nodes_of_interest)
 
-    C_extracted = fea_analysis.extract_compliance_matrix()
-    displacement_dict[element] = C_extracted[5,0]
-# sum_of_disp = np.sum(np.array(displacement_dict.values()))
-# print(f"theta_z: {sum_of_disp}")
-fea_analysis.displacement_visualization(displacement_dict)
+#     C_extracted = fea_analysis.extract_compliance_matrix()
+#     displacement_dict[element] = C_extracted[0,0]
+# fea_analysis.displacement_visualization(displacement_dict)
 ######################################################################################################################
